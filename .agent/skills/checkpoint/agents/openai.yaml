@@ -1,0 +1,6 @@
+interface:
+  display_name: "gstack-checkpoint"
+  short_description: "Save and resume working state checkpoints. Captures git state, decisions made, and remaining work so you can pick up..."
+  default_prompt: "Use gstack-checkpoint for this task."
+policy:
+  allow_implicit_invocation: true

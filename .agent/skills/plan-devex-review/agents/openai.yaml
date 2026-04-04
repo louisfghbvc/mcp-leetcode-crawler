@@ -1,0 +1,6 @@
+interface:
+  display_name: "gstack-plan-devex-review"
+  short_description: "Developer Experience plan review. Evaluates plans through Addy Osmani's DX framework: zero friction, learn by doing,..."
+  default_prompt: "Use gstack-plan-devex-review for this task."
+policy:
+  allow_implicit_invocation: true
