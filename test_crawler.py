@@ -5,7 +5,11 @@ Uses `responses` to mock HTTP calls — no real network access.
 """
 
 import datetime
+import pathlib
+import subprocess
+import sys
 
+import pandas as pd
 import pytest
 import responses as responses_lib
 
@@ -199,9 +203,9 @@ class TestFilterBySince:
 
     def test_invalid_format_via_argparse(self):
         """CLI --since 2x → argparse SystemExit with error message."""
-        import subprocess, sys
+        cli_path = str(pathlib.Path(__file__).parent / "cli.py")
         result = subprocess.run(
-            [sys.executable, "cli.py", "--since", "2x", "--pages", "0"],
+            [sys.executable, cli_path, "--since", "2x", "--pages", "0"],
             capture_output=True, text=True,
         )
         assert result.returncode != 0
@@ -317,6 +321,5 @@ class TestCSVTruncation:
         output = tmp_path / "out.csv"
         crawler.save_to_csv(posts, filename=str(output))
 
-        import pandas as pd
         df = pd.read_csv(str(output))
         assert len(df["question_description"][0]) == 2000

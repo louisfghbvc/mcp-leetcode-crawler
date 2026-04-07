@@ -123,9 +123,12 @@ class LeetCodeCrawler:
             content = post.get("content") or ""
             soup = BeautifulSoup(content, "html.parser")
 
+            # Cache anchor list — avoid two full tree traversals
+            all_anchors = soup.find_all("a")
+
             # Extract LeetCode problem link
             problem_links = [
-                a["href"] for a in soup.find_all("a")
+                a["href"] for a in all_anchors
                 if "problems" in a.get("href", "")
             ]
             problem_link = problem_links[0] if problem_links else None
@@ -136,7 +139,7 @@ class LeetCodeCrawler:
             #   discussion   — pure text, no links
             if problem_link:
                 question_type = "leetcode"
-            elif any("/discuss/" in a.get("href", "") for a in soup.find_all("a")):
+            elif any("/discuss/" in a.get("href", "") for a in all_anchors):
                 question_type = "discuss_link"
             else:
                 question_type = "discussion"
@@ -186,13 +189,11 @@ class LeetCodeCrawler:
         result = []
 
         for slug, group in slug_groups.items():
-            # Sort descending by (created_at, url) for deterministic tiebreak
-            group_sorted = sorted(
+            # Pick the most-recent post as canonical in O(k) instead of O(k log k)
+            canonical = dict(max(
                 group,
                 key=lambda p: (p.get("created_at") or "", p.get("url") or ""),
-                reverse=True,
-            )
-            canonical = dict(group_sorted[0])
+            ))
             canonical["frequency"] = len(group)
             result.append(canonical)
 
@@ -241,7 +242,7 @@ class LeetCodeCrawler:
             if "created_at" in post and post["created_at"]:
                 try:
                     date_obj = datetime.datetime.fromisoformat(
-                        post["created_at"].replace("Z", "+00:00")
+                        str(post["created_at"]).replace("Z", "+00:00")
                     )
                     month_key = f"{date_obj.year}-{date_obj.month:02d}"
                     posts_by_month.setdefault(month_key, []).append(post)
@@ -261,11 +262,11 @@ class LeetCodeCrawler:
 
     def save_by_month(self, posts_by_month, directory="output", company_tag="google"):
         """Save posts grouped by month to separate CSV files."""
-        if not os.path.exists(directory):
-            os.makedirs(directory)
+        os.makedirs(directory, exist_ok=True)
+        safe_tag = re.sub(r"[^\w\-]", "_", company_tag)
         for month, posts in posts_by_month.items():
             filename = os.path.join(
-                directory, f"leetcode_{company_tag}_interviews_{month}.csv"
+                directory, f"leetcode_{safe_tag}_interviews_{month}.csv"
             )
             df = pd.DataFrame(posts)
             if "question_description" in df.columns:
