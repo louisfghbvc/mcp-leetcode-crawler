@@ -5,11 +5,9 @@ Uses `responses` to mock HTTP calls — no real network access.
 """
 
 import datetime
-import json
 
 import pytest
 import responses as responses_lib
-from responses import matchers
 
 from crawler import LeetCodeCrawler
 
