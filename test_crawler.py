@@ -11,9 +11,11 @@ import sys
 
 import pandas as pd
 import pytest
+import requests
+import requests.models
 import responses as responses_lib
 
-from crawler import LeetCodeCrawler
+from crawler import LeetCodeCrawler, _is_retryable
 
 
 DISCUSS_API = "https://leetcode.com/discuss/api/topics"
@@ -35,6 +37,61 @@ def _make_post_response(post_id, content="", title="Test", created_at="2026-01-0
             }
         }
     }
+
+
+# ---------------------------------------------------------------------------
+# _is_retryable unit tests — all 6 branches
+# ---------------------------------------------------------------------------
+
+class TestIsRetryable:
+    def _http_error(self, status_code):
+        """Build a requests.HTTPError with a mock response for the given status."""
+        resp = requests.models.Response()
+        resp.status_code = status_code
+        err = requests.exceptions.HTTPError(response=resp)
+        return err
+
+    def test_json_decode_error_not_retried(self):
+        """JSONDecodeError → False (never retry a broken response body)."""
+        exc = requests.exceptions.JSONDecodeError("", "", 0)
+        assert _is_retryable(exc) is False
+
+    def test_http_429_retried(self):
+        """429 rate-limit → True."""
+        assert _is_retryable(self._http_error(429)) is True
+
+    def test_http_500_retried(self):
+        """500 server error → True."""
+        assert _is_retryable(self._http_error(500)) is True
+
+    def test_http_503_retried(self):
+        """503 service unavailable → True."""
+        assert _is_retryable(self._http_error(503)) is True
+
+    def test_http_404_not_retried(self):
+        """404 not found → False (4xx non-429 are not transient)."""
+        assert _is_retryable(self._http_error(404)) is False
+
+    def test_http_403_not_retried(self):
+        """403 forbidden → False."""
+        assert _is_retryable(self._http_error(403)) is False
+
+    def test_http_error_no_response_not_retried(self):
+        """HTTPError with no .response attribute → False (cannot determine status)."""
+        err = requests.exceptions.HTTPError()  # no response kwarg
+        assert _is_retryable(err) is False
+
+    def test_connection_error_retried(self):
+        """ConnectionError → True (transient network issue)."""
+        assert _is_retryable(requests.exceptions.ConnectionError()) is True
+
+    def test_timeout_retried(self):
+        """Timeout → True (transient)."""
+        assert _is_retryable(requests.exceptions.Timeout()) is True
+
+    def test_generic_exception_not_retried(self):
+        """Arbitrary exception → False (unknown, don't retry)."""
+        assert _is_retryable(ValueError("boom")) is False
 
 
 # ---------------------------------------------------------------------------

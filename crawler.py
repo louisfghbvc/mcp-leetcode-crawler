@@ -58,11 +58,12 @@ class LeetCodeCrawler:
 
     def _get_json(self, url, **kwargs):
         """GET a URL with retry/backoff. JSONDecodeError is re-raised immediately
-        (no retry). 429 and 5xx are retried up to 3 times with 2s/4s/8s backoff."""
+        (no retry). 429 and 5xx are retried up to 3 times (4 total attempts)
+        with 2s/4s/8s exponential backoff."""
         @tenacity.retry(
             retry=tenacity.retry_if_exception(_is_retryable),
             wait=tenacity.wait_exponential(multiplier=1, min=2, max=8),
-            stop=tenacity.stop_after_attempt(3),
+            stop=tenacity.stop_after_attempt(4),
             before_sleep=tenacity.before_sleep_log(logger, logging.WARNING),
             reraise=True,
         )
@@ -106,10 +107,10 @@ class LeetCodeCrawler:
 
             except requests.exceptions.JSONDecodeError as e:
                 logger.error(f"JSON decode error on page {page}: {e}")
-                break
+                continue
             except requests.exceptions.RequestException as e:
                 logger.error(f"Error fetching page {page}: {e}")
-                break
+                continue
 
         return all_posts
 
