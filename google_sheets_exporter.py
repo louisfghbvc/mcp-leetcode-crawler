@@ -5,6 +5,7 @@ Google Sheets Exporter for LeetCode Crawler
 This script exports crawled LeetCode interview questions to Google Sheets.
 """
 
+import json
 import os
 import pandas as pd
 import logging
@@ -238,8 +239,7 @@ class GoogleSheetsExporter:
 
 if __name__ == "__main__":
     import argparse
-    import json
-    
+
     parser = argparse.ArgumentParser(description="Export LeetCode crawler data to Google Sheets")
     parser.add_argument("--csv", help="Path to the CSV file to export")
     parser.add_argument("--monthly", action="store_true", help="Export all monthly CSV files in the output directory")
