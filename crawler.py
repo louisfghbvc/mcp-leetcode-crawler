@@ -127,10 +127,12 @@ class LeetCodeCrawler:
             # Cache anchor list — avoid two full tree traversals
             all_anchors = soup.find_all("a")
 
-            # Extract LeetCode problem link
+            # Extract LeetCode problem link — require leetcode.com hostname to
+            # avoid external URLs like "evil.com/problems/two-sum" polluting dedup.
             problem_links = [
                 a["href"] for a in all_anchors
-                if "problems" in a.get("href", "")
+                if "leetcode.com/problems/" in a.get("href", "")
+                or a.get("href", "").startswith("/problems/")
             ]
             problem_link = problem_links[0] if problem_links else None
 
@@ -165,6 +167,10 @@ class LeetCodeCrawler:
             return None
         except requests.exceptions.RequestException as e:
             logger.error(f"Error fetching post {post_id}: {e}")
+            return None
+        except (AttributeError, TypeError, KeyError) as e:
+            # Guard against unexpected API response shapes (e.g. list instead of dict)
+            logger.error(f"Unexpected API response shape for post {post_id}: {e}")
             return None
 
     def deduplicate(self, posts):

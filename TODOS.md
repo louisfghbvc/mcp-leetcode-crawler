@@ -80,3 +80,23 @@ developers subscribe to interview intelligence without running anything locally.
 If friends actually use the Google Sheet link, this is worth building.
 
 **Effort:** M (human: ~1 day / CC: ~20 min) | **Depends on:** Phase 1 + validate data has value
+
+---
+
+### frequency + --since semantic correctness
+**What:** When `--since` is used, `frequency` still reflects the global all-time dedup count rather
+than the count within the time window. A post with 40 old duplicates and 1 recent one passes
+`--since 7d` with `frequency=41`, misleading downstream ranking/trend analysis.
+
+**Why:** Identified during Codex adversarial review of feat/phase1-stabilize. The dedup-before-filter
+ordering in `run()` (crawler.py:298-303) is the root cause.
+
+**Fix options:**
+- Option A: Filter before dedup — only dedup posts within the time window. Changes frequency semantics
+  from "global popularity" to "recent popularity."
+- Option B: Track two counts: `frequency_global` and `frequency_recent`. More data, cleaner semantics.
+- Option C: Document in output CSV headers that frequency is global, not window-scoped.
+
+**Context:** Deferred from Phase 1 ship. Option C is a 5-min fix; A or B require run() redesign.
+
+**Effort:** XS-M (human: ~2h / CC: ~15 min) | **Priority:** P2 — affects trend analysis correctness
