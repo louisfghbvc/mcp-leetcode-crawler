@@ -8,7 +8,7 @@ Phase 1 (stabilization) work is tracked in the CEO plan:
 
 ## P1 — High Priority
 
-### MCP Server Layer
+### MCP Server Layer (COMPLETED v0.2.0.0 — see P2 items below for follow-up work)
 **What:** Wrap the crawler as a Model Context Protocol server with 3 tools:
 `search_discussions(company, days)`, `get_hot_problems(company)`, `get_thread(id)`.
 
@@ -80,6 +80,41 @@ developers subscribe to interview intelligence without running anything locally.
 If friends actually use the Google Sheet link, this is worth building.
 
 **Effort:** M (human: ~1 day / CC: ~20 min) | **Depends on:** Phase 1 + validate data has value
+
+---
+
+### MCP Server: atomic cache writes
+**What:** `refresh()` writes directly via `df.to_csv()`. If the process is killed mid-write the cache
+is left partially written and silently returns `[]` on next read.
+
+**Why:** Identified via adversarial review of feat/phase2-mcp-server.
+
+**Fix:** Write to a temp file then `os.replace()` (atomic on POSIX).
+
+**Effort:** XS (human: ~30 min / CC: ~5 min) | **Priority:** P2 — data integrity on process kill
+
+---
+
+### MCP Server: num_pages cap in refresh
+**What:** No upper bound on `num_pages`. `num_pages=99999` triggers ~1.5M requests.
+
+**Why:** Identified via adversarial review. MCP clients time out anyway but the crawl keeps running.
+
+**Fix:** Cap at 50 (or make configurable) and document it. Also handle `num_pages=0`.
+
+**Effort:** XS | **Priority:** P2 — DoS/resource exhaustion
+
+---
+
+### MCP Server: in-memory CSV cache + crawler singleton
+**What:** `_load_cache` re-reads CSV on every call. `LeetCodeCrawler()` creates a new
+`requests.Session` on every call. Both are wasted I/O/allocation on the hot path.
+
+**Why:** Identified via performance specialist review of feat/phase2-mcp-server.
+
+**Fix:** mtime-gated in-memory cache dict + module-level crawler singleton.
+
+**Effort:** S (human: ~1h / CC: ~10 min) | **Priority:** P2 — latency improvement
 
 ---
 

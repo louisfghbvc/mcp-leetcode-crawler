@@ -2,6 +2,35 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.0.0] - 2026-04-13
+
+### Added
+- **MCP server layer** (`mcp_server.py`): wraps the crawler as a Model Context Protocol server
+  with 4 tools over stdio transport, ready for Claude Desktop and Claude Code.
+  - `search_discussions(company, days)` — query cached posts by company and time window.
+  - `get_hot_problems(company, limit)` — top LeetCode problems ranked by discussion frequency.
+  - `get_thread(post_id)` — real-time single-thread fetch (no cache).
+  - `refresh(company, num_pages, days)` — crawl LeetCode and rebuild the on-disk cache.
+- **Cache layer** in `./cache/{company}_questions.csv` — instant reads between crawls.
+- **21 new tests** in `test_mcp_server.py` covering all 4 tools, NaN handling, malformed CSV,
+  path traversal sanitization, negative input validation, and edge cases (limit=0, days=0,
+  frequency=None). Total suite grows from 29 → 50 tests.
+
+### Changed
+- `mcp>=1.0.0` added to `requirements.txt`.
+
+### Fixed
+- `_load_cache` now handles malformed or corrupt CSV files gracefully (returns `[]`).
+- `_load_cache` uses `v != v` idiom to reliably replace float NaN with `None` across all
+  pandas column dtypes (not just object-type columns).
+- `get_hot_problems` sort key uses `int(float(...))` to handle pandas float-string
+  representations (`"5.0"`) that survive a CSV roundtrip without crashing.
+- `get_hot_problems` guards against `limit < 0` (negative slice was silently returning wrong results).
+- `search_discussions` and `refresh` validate `days >= 0` with a clear `ValueError` before
+  passing to `filter_by_since`.
+- Company parameter is sanitized with `re.sub(r"[^\w\-]", "_", company)` before use in
+  cache filenames, preventing path traversal (mirrors the fix in `save_by_month`).
+
 ## [0.1.0.0] - 2026-04-08
 
 ### Added
