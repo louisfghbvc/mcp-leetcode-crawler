@@ -30,23 +30,6 @@ Start here: https://github.com/anthropics/mcp
 
 ## P2 — Medium Priority
 
-### AI Extraction Layer
-**What:** Use Claude API to read each discussion thread's raw content and output structured data:
-`{problem_name, leetcode_url, interview_stage, difficulty, reported_outcome}`.
-
-**Why:** Current output is raw text. This transforms "a pile of text" into "analyzable data."
-It's the difference between a scraper and an intelligence tool.
-
-**Pros:** Enables downstream analytics; unlocks trend detection; feeds MCP server with structured results.
-
-**Cons:** API cost per post (~$0.001/post with Claude Haiku); adds latency per run.
-
-**Context:** Design doc Phase 3. Only worth doing once Phase 1 output is clean enough to pass to an LLM.
-Use Claude Haiku for cost efficiency; Claude Sonnet for accuracy. Batch calls per page fetch.
-
-**Effort:** M (human: ~1 day / CC: ~20 min) | **Depends on:** Phase 1 + MCP layer
-
----
 
 ### Multi-company Support + Trend Scoring
 **What:** `--companies google,meta,amazon` runs a single crawl across multiple companies.
@@ -135,3 +118,13 @@ ordering in `run()` (crawler.py:298-303) is the root cause.
 **Context:** Deferred from Phase 1 ship. Option C is a 5-min fix; A or B require run() redesign.
 
 **Effort:** XS-M (human: ~2h / CC: ~15 min) | **Priority:** P2 — affects trend analysis correctness
+
+
+---
+
+## Completed
+
+### AI Extraction Layer **Completed: v0.3.0.0 (2026-04-13)**
+**What:** `extractor.py` — Claude Haiku extracts `{problem_name, leetcode_url, interview_stage,
+difficulty, reported_outcome}` from raw discussion posts. Integrated in `cli.py` (`--enrich`) and
+`mcp_server.py` (`refresh(enrich=True)`).
