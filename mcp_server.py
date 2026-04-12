@@ -23,6 +23,7 @@ import pandas as pd
 from mcp.server.fastmcp import FastMCP
 
 from crawler import LeetCodeCrawler
+from extractor import enrich_posts
 
 CACHE_DIR = pathlib.Path(__file__).parent / "cache"
 
@@ -111,6 +112,7 @@ def refresh(
     company: str = "google",
     num_pages: int = 10,
     days: int | None = None,
+    enrich: bool = False,
 ) -> dict:
     """Crawl LeetCode and rebuild the on-disk cache for a company.
 
@@ -118,15 +120,28 @@ def refresh(
         company: Company tag, e.g. 'google', 'meta', 'amazon'. (default: google)
         num_pages: Pages of discussions to crawl (15 posts/page). (default: 10)
         days: If set, only cache posts from the last N days.
+        enrich: If True, run AI extraction on each post (requires ANTHROPIC_API_KEY).
+                Adds problem_name, difficulty, interview_stage, reported_outcome fields.
 
-    Returns a summary dict with 'company', 'posts_saved', and 'cache_path'.
+    Returns a summary dict with 'company', 'posts_saved', 'cache_path', and
+    optionally 'enriched' (count of posts enriched by AI).
     """
     crawler = LeetCodeCrawler()
     since = f"{days}d" if days is not None else None
     posts = crawler.run(company_tag=company, num_pages=num_pages, since=since)
+
+    enriched_count = 0
+    if enrich:
+        enrich_posts(posts)
+        enriched_count = sum(1 for p in posts if p.get("reported_outcome") is not None)
+
     path = _cache_path(company)
     crawler.save_to_csv(posts, filename=str(path))
-    return {"company": company, "posts_saved": len(posts), "cache_path": str(path)}
+
+    result = {"company": company, "posts_saved": len(posts), "cache_path": str(path)}
+    if enrich:
+        result["enriched"] = enriched_count
+    return result
 
 
 if __name__ == "__main__":

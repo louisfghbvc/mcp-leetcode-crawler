@@ -10,6 +10,7 @@ import logging
 import re
 import sys
 from crawler import LeetCodeCrawler
+from extractor import enrich_posts
 
 
 def _parse_since(value):
@@ -52,6 +53,12 @@ def main():
     parser.add_argument("--since", type=_parse_since, default=None,
                         help="Only include posts from the last N days/weeks (e.g. 7d, 2w)")
 
+    # AI enrichment
+    parser.add_argument("--enrich", action="store_true",
+                        help="Use Claude Haiku to extract problem_name, difficulty, "
+                             "interview_stage, reported_outcome from each post "
+                             "(requires ANTHROPIC_API_KEY)")
+
     args = parser.parse_args()
 
     # Adjust log level without calling basicConfig again (crawler.py already called it)
@@ -68,6 +75,12 @@ def main():
         category=args.category,
         since=args.since,
     )
+
+    # AI enrichment (optional)
+    if args.enrich:
+        logger.info("Enriching posts with AI extraction...")
+        posts = enrich_posts(posts)
+        logger.info(f"Enrichment complete.")
 
     # Save results
     crawler.save_to_csv(posts, filename=args.output)

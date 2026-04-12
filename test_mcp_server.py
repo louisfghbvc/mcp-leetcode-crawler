@@ -282,3 +282,23 @@ class TestRefresh:
         # Traversal characters must not appear in the filename
         assert ".." not in pathlib.Path(result["cache_path"]).name
         assert "/" not in pathlib.Path(result["cache_path"]).name
+
+    def test_refresh_enrich_flag_runs_enrichment(self, tmp_path, monkeypatch):
+        """refresh(enrich=True) calls enrich_posts and returns enriched count."""
+        monkeypatch.setattr(mcp_server, "CACHE_DIR", tmp_path / "cache")
+        fake_posts = [{"post_id": "1", "title": "LRU Cache"}]
+
+        def fake_enrich(posts, **kwargs):
+            for p in posts:
+                p["reported_outcome"] = "passed"
+            return posts
+
+        with patch("mcp_server.LeetCodeCrawler") as MockCrawler, \
+             patch("mcp_server.enrich_posts", side_effect=fake_enrich) as mock_enrich:
+            instance = MockCrawler.return_value
+            instance.run.return_value = fake_posts
+            result = mcp_server.refresh("google", enrich=True)
+
+        mock_enrich.assert_called_once_with(fake_posts)
+        assert result["enriched"] == 1
+        assert "enriched" in result

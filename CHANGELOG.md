@@ -2,6 +2,33 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.0.0] - 2026-04-13
+
+### Added
+- **AI extraction layer** (`extractor.py`): uses Claude Haiku to extract structured data from
+  raw discussion posts — `problem_name`, `leetcode_url`, `interview_stage`, `difficulty`, and
+  `reported_outcome` — added in-place to each post dict.
+  - Already-enriched posts are skipped on re-run (idempotent enrichment).
+  - Posts where the API call fails get `reported_outcome=None` so they are retried on the next
+    `enrich_posts` call rather than being permanently skip-listed.
+  - Handles rate limits with 3 retries and respects markdown code-fence responses from the model.
+- **`--enrich` flag in CLI** (`cli.py`): passes enriched posts through `enrich_posts` before
+  saving to CSV (requires `ANTHROPIC_API_KEY`).
+- **`enrich=True` param in MCP `refresh` tool** (`mcp_server.py`): runs AI extraction after
+  crawling and returns an `enriched` count in the result dict.
+- **`anthropic>=0.20.0`** added to `requirements.txt`.
+- **15 new tests** in `test_extractor.py` and `test_cli.py` covering structured response parsing,
+  markdown fence stripping, retry on rate limit, API error fallback, idempotent skip logic,
+  missing API key error, and CLI integration. Total suite grows from 21 → 36 tests.
+
+### Fixed
+- `extractor.py`: escaped user-controlled curly braces before `str.format()` to prevent `KeyError`
+  crashes when post content contains `{placeholder}`-like substrings.
+- `extractor.py`: improved markdown code-fence stripping to handle any language tag (not just
+  `json`), preventing silent data loss when the model returns ` ```javascript ` or bare ` ``` `.
+- `extractor.py`: `enriched_count` now only increments on successful extraction (non-empty
+  response), so the log message accurately reports failures instead of always showing 100%.
+
 ## [0.2.0.0] - 2026-04-13
 
 ### Added
